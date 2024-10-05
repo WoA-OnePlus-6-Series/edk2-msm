@@ -16,50 +16,82 @@
 #define _KERNEL_ERRATA_PATCHER_H_
 
 #include <PiDxe.h>
-
-#include <Library/UefiLib.h>
 #include <Uefi.h>
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PerformanceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
-#include "ntdef.h"
+#include <Protocol/MemoryAttribute.h>
 
-#define NT_OS_KERNEL_IMAGE_NAME L"ntoskrnl.exe"
-#define ARM64_INSTRUCTION_LENGTH 4
-#define ARM64_TOTAL_INSTRUCTION_LENGTH(x) (ARM64_INSTRUCTION_LENGTH * x)
+#define FirmwarePrint(x, ...)                                            DEBUG((EFI_D_ERROR, x, __VA_ARGS__));
 
-#define SCAN_MAX 0x5f5e100
-#define SEC_TO_MICRO(x) ((UINTN)(x)*1000 * 1000)
+#define NT_OS_LOADER_ARM64_TRANSFER_TO_KERNEL_FUNCTION_OFFSET            0x400
+#define NT_OS_LOADER_ARM64_TRANSFER_TO_KERNEL_FUNCTION_OFFSET_GERMANIUM  0x480
+#define ARM64_INSTRUCTION_LENGTH                                         4
+#define ARM64_TOTAL_INSTRUCTION_LENGTH(x)                               (ARM64_INSTRUCTION_LENGTH * x)
 
-#define IN_RANGE(x, a, b) (x >= a && x <= b)
-#define GET_BITS(x)                                                            \
-  (IN_RANGE((x & (~0x20)), 'A', 'F') ? ((x & (~0x20)) - 'A' + 0xA)             \
-                                     : (IN_RANGE(x, '0', '9') ? x - '0' : 0))
-#define GET_BYTE(a, b) (GET_BITS(a) << 4 | GET_BITS(b))
+#define ARM64_BRANCH_LOCATION_INSTRUCTION(CurrentOffset, TargetOffset)  (0x94000000u | ((UINT32)((TargetOffset - CurrentOffset) / ARM64_INSTRUCTION_LENGTH) & 0x7FFFFFFu))
 
-typedef VOID (*BL_ARCH_SWITCH_CONTEXT)(UINT32 target);
+#define SCAN_MAX                                                         0x300000
+
+#define IN_RANGE(x, a, b)                                               (x >= a && x <= b)
+#define GET_BITS(x)                                                     (IN_RANGE((x & (~0x20)), 'A', 'F') ? ((x & (~0x20)) - 'A' + 0xA) : (IN_RANGE(x, '0', '9') ? x - '0' : 0))
+#define GET_BYTE(a, b)                                                  (GET_BITS(a) << 4 | GET_BITS(b))
 
 EFI_STATUS
 EFIAPI
 KernelErrataPatcherExitBootServices(
-    IN EFI_HANDLE ImageHandle, IN UINTN MapKey,
-    IN PLOADER_PARAMETER_BLOCK loaderBlockX19,
-    IN PLOADER_PARAMETER_BLOCK loaderBlockX20,
-    IN EFI_PHYSICAL_ADDRESS    returnAddress);
+  IN EFI_HANDLE           ImageHandle,
+  IN UINTN                MapKey,
+  IN EFI_PHYSICAL_ADDRESS fwpKernelSetupPhase1
+  );
 
 EFI_STATUS
 EFIAPI
-ExitBootServicesWrapper(IN EFI_HANDLE ImageHandle, IN UINTN MapKey);
+ExitBootServicesWrapper(
+  IN EFI_HANDLE ImageHandle,
+  IN UINTN      MapKey);
 
-VOID CopyMemory(
-    EFI_PHYSICAL_ADDRESS destination, EFI_PHYSICAL_ADDRESS source, UINTN size);
-UINT64 FindPattern(
-    EFI_PHYSICAL_ADDRESS baseAddress, UINT64 size, const CHAR8 *pattern);
-KLDR_DATA_TABLE_ENTRY *GetModule(LIST_ENTRY *list, const CHAR16 *name);
+EFI_PHYSICAL_ADDRESS
+LocateWinloadBase(
+  EFI_PHYSICAL_ADDRESS base,
+  UINTN               *size
+  );
+
+VOID
+CopyMemory(
+  EFI_PHYSICAL_ADDRESS destination,
+  EFI_PHYSICAL_ADDRESS source,
+  UINTN                size
+  );
+
+UINT64
+FindPattern(
+  EFI_PHYSICAL_ADDRESS baseAddress,
+  UINT64               size,
+  CONST CHAR8         *pattern
+  );
+
+EFI_STATUS
+EFIAPI
+UnprotectWinload(
+  EFI_PHYSICAL_ADDRESS WinloadBase,
+  UINTN                WinloadLength);
+
+EFI_STATUS
+EFIAPI
+ReProtectWinload(
+  EFI_PHYSICAL_ADDRESS WinloadBase,
+  UINTN                WinloadLength);
+
+EFI_STATUS
+EFIAPI
+InitMemoryAttributeProtocol();
 
 #endif /* _KERNEL_ERRATA_PATCHER_H_ */
