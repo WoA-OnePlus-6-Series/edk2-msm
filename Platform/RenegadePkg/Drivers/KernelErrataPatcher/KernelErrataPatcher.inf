@@ -43,3 +43,5 @@
   gEfiEventExitBootServicesGuid       ## CONSUMES
   gEfiEventReadyToBootGuid
 
+[Depex]
+  TRUE
