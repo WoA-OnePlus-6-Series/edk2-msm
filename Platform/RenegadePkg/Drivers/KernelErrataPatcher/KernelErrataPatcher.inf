@@ -39,12 +39,7 @@
   UefiBootServicesTableLib
   UefiLib
 
-[Protocols]
-  gEfiMemoryAttributeProtocolGuid
-
 [Guids]
   gEfiEventExitBootServicesGuid       ## CONSUMES
   gEfiEventReadyToBootGuid
 
-[Depex]
-  gEfiMemoryAttributeProtocolGuid
