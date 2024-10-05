@@ -19,6 +19,7 @@
 
 [Sources]
   KernelErrataPatcher.c
+  Mmu.c
   Utilities.c
 
 [Sources.AARCH64]
@@ -32,13 +33,18 @@
 [LibraryClasses]
   BaseMemoryLib
   DebugLib
+  DxeServicesTableLib
   MemoryAllocationLib
+  PerformanceLib
   UefiBootServicesTableLib
-  UefiDriverEntryPoint
   UefiLib
+
+[Protocols]
+  gEfiMemoryAttributeProtocolGuid
 
 [Guids]
   gEfiEventExitBootServicesGuid       ## CONSUMES
+  gEfiEventReadyToBootGuid
 
 [Depex]
-  TRUE
+  gEfiMemoryAttributeProtocolGuid
